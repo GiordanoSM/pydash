@@ -31,8 +31,8 @@ class r2aPandas(IR2A):
         self.parsed_mpd = parse_mpd(msg.get_payload())
         self.pandas.qi = np.array(self.parsed_mpd.get_qi())
 
-        if self.pandas.n == 0: 
-            self.pandas.initpandas(time.perf_counter(), msg.get_bit_length()) # faz a iniciação dos valores do algoritmo após receber o mpd
+        if self.pandas.n == 0:  # faz a iniciação dos valores do algoritmo após receber o mpd
+            self.pandas.initpandas(time.perf_counter(), msg.get_bit_length())
         self.send_up(msg)
 
     def handle_segment_size_request(self, msg):
@@ -47,8 +47,9 @@ class r2aPandas(IR2A):
         pass
 
     def finalization(self):
-        for xn in self.pandas.x:
-            print(xn)
+        '''for xn in self.pandas.x:
+            print(xn)'''
+        pass
 
 
 class Pandas:
@@ -92,7 +93,7 @@ class Pandas:
     # Estimativa da porção da largura de banda
     
     def estimate_xn(self):
-        self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez daria Bmin
+        self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez td[0]
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
         self.x.append(xn)
