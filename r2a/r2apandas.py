@@ -24,31 +24,23 @@ class r2aPandas(IR2A):
         self.pandas = Pandas()
 
     def handle_xml_request(self, msg):
-        #self.pandas.b(self.whiteboard.get_playback_buffer_size())
-        self.pandas.update_request(time.perf_counter())
+        self.pandas.update_request(time.perf_counter(), self.whiteboard.get_playback_buffer_size())
         self.send_down(msg)
 
     def handle_xml_response(self, msg):
-        # getting qi list
         self.parsed_mpd = parse_mpd(msg.get_payload())
         self.pandas.qi = np.array(self.parsed_mpd.get_qi())
 
-        #throughput do xml, primeiro throughput do algoritmo
-        self.pandas.td[0] = time.perf_counter() - self.pandas.trequest
-        self.pandas.z.append(msg.get_bit_length()/self.pandas.td[0])
-        
-        self.pandas.initpandas() # faz a iniciação dos valores do algoritmo após receber o mpd
+        if self.pandas.n == 0: 
+            self.pandas.initpandas(time.perf_counter(), msg.get_bit_length()) # faz a iniciação dos valores do algoritmo após receber o mpd
         self.send_up(msg)
 
     def handle_segment_size_request(self, msg):
-        #msg.add_quality_id(self.pandas.get_quality())
-        msg.add_quality_id(self.pandas.r[1])
-        self.pandas.update_request(time.perf_counter())
+        msg.add_quality_id(self.pandas.r[-1])
         self.send_down(msg)
 
     def handle_segment_size_response(self, msg):
         self.pandas.update_response(time.perf_counter())
-        #self.pandas.get_rate()
         self.send_up(msg)
 
     def initialize(self):
@@ -84,12 +76,14 @@ class Pandas:
         self.deltaup   = deltaup     # margem de segurança para cima 
         self.deltadown = deltadown   # margem de segurança para baixo
 
-    def initpandas(self):
+    def initpandas(self, actual_trequest, bit_length):
+        #throughput do xml, primeiro throughput do algoritmo
+        self.td[0] = actual_trequest - self.trequest
+        self.z.append(bit_length/self.td[0])
         idx_x0 = self.qi.size/2
         x0 = self.qi[int(idx_x0)]
         self.x.append(x0)
         self.y.append(x0)
-        #self.z.append(x0)
         self.r[0] = int(idx_x0) #inicializando qualidade inicial
         self.r[1] = x0    
 
@@ -162,9 +156,9 @@ class Pandas:
         self.td.append(self.tresponse - self.trequest) # tempo do download do segmento
         self.z.append((self.r[1]*self.t)/self.td[-1]) # valor do throughput TCP real
     
-    def update_request(self, actual_trequest):
+    def update_request(self, actual_trequest, buffer_size):
         self.n += 1
         self.trequest = actual_trequest
-        #self.pandas.b(self.whiteboard.get_playback_buffer_size()) #.pandas.b?????? / nao tem atributo whiteboard
+        self.b = buffer_size 
 
 
