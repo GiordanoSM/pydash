@@ -47,13 +47,16 @@ class r2aPandas(IR2A):
         pass
 
     def finalization(self):
-        '''for xn in self.pandas.x:
-            print(xn)'''
+        '''print("**************** x:")
+        print("x:", self.pandas.x)
+        print("**************** tr:")
+        print("tr:", self.pandas.tr)'''
         pass
+        
 
 
 class Pandas:
-    def __init__(self, w=0.3, k=0.14, beta=0.2, alfa=0.2, e=0.15, t=0, b=[], 
+    def __init__(self, w=0.3, k=0.14, beta=0.2, alfa=0.2, e=0.15, t=1, b=[], 
                  bmin=26, r = [], deltaup=0, deltadown=0, trequest=0, tresponse=0, 
                  n=-1, tnd=[0], tr=[], td=[0], x=[], y=[], z=[], qi=np.array([])):
         self.trequest = trequest # momento em que foi realizado o request
@@ -83,7 +86,7 @@ class Pandas:
         self.td[0] = actual_trequest - self.trequest
         self.z.append(bit_length/self.td[0])
         idx_x0 = self.qi.size/2
-        x0 = self.qi[int(idx_x0)]
+        x0 = self.qi[0]  # lembrar de mudar ****
         self.x.append(x0)
         self.y.append(x0)
         self.r.append(x0)
@@ -93,7 +96,7 @@ class Pandas:
     # Estimativa da porção da largura de banda
     
     def estimate_xn(self):
-        self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez td[0]
+        self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez tr[0] = td[0]
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
         self.x.append(xn)
@@ -103,7 +106,7 @@ class Pandas:
         self.S()
         self.Q()
         self.tTarget_inter_request()
-        return self.r[-1]
+        return self.r[0]
 
     def S(self): #EWMA smoother
         self.y.append(self.y[-1] - self.tr[-1] * self.alfa * (self.y[-1] - self.x[-1]))
