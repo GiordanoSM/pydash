@@ -56,7 +56,8 @@ class r2aPandas(IR2A):
     def finalization(self):
         print("**************** x:")
         print("x:", self.pandas.x)
-        print('z:', self.pandas.z)
+        print("z:", self.pandas.z)
+        print("qi:", self.pandas.qi)
         #pass
         
 
@@ -64,7 +65,7 @@ class r2aPandas(IR2A):
 class Pandas:
     def __init__(self, w=0.3, k=0.14, beta=0.2, alfa=0.2, e=0.15, t=1, b=[], 
                  bmin=26, r = [], deltaup=0, deltadown=0, trequest=0, tresponse=0, 
-                 n=-1, tnd=[0], tr=[], td=[0], x=[], y=[], z=[], qi=np.array([])):
+                 n=-1, tnd=[], tr=[], td=[0], x=[], y=[], z=[], qi=np.array([])):
         self.trequest = trequest # momento em que foi realizado o request
         self.tresponse = tresponse # momento em que foi recebida a resposta
         self.n     = n     # numero do segmento
@@ -87,10 +88,12 @@ class Pandas:
         self.deltaup   = deltaup     # margem de segurança para cima 
         self.deltadown = deltadown   # margem de segurança para baixo
 
-    def initpandas(self, actual_trequest, bit_length):
+    def initpandas(self, actual_tresponse, bit_length):
         #throughput do xml, primeiro throughput do algoritmo
-        self.td[0] = actual_trequest - self.trequest
-        self.z.append(bit_length/self.td[0])
+        self.tresponse = actual_tresponse
+        self.td[0] = actual_tresponse - self.trequest
+        self.z.append(bit_length/self.td[0]) ####
+
         idx_x0 = int(self.qi.size/2)   # escolher inicialização
         x0 = self.qi[idx_x0]  
         self.x.append(x0)
@@ -101,8 +104,11 @@ class Pandas:
     # Estimativa da porção da largura de banda
     
     def estimate_xn(self):
-        self.tr.append(max(self.t, self.td[-1])) #na primeira vez tr[0] = td[0]
+        self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez tr[0] = td[0]
         #self.b.append(max(0, self.b[-1] + self.t - self.tr[-1]))
+
+        if (self.tnd[-1] > self.td[-1]):
+            time.sleep(self.tnd[-1] - self.td[-1])
 
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
@@ -116,13 +122,11 @@ class Pandas:
         #Sugestao: 
 
         qi2 = 0
-        for q in self.qi:
-            if q <= self.x[-1]:
-                qi2 = max(qi2, q)
-        
-        if(qi2 == 0): qi2 = self.qi[0]
 
-        self.r.append(qi2)
+        qi2 = self.qi[self.qi <= self.y[-1]]
+        
+        if(qi2.size == 0): self.r.append(self.qi[0])
+        else: self.r.append(qi2[-1])
 
         self.tTarget_inter_request()
         return self.r[-1]
@@ -166,16 +170,3 @@ class Pandas:
         self.n += 1
         self.trequest = actual_trequest
         self.b.append(buffer_size)
-
-
-'''
-        #Sugestao: 
-        i2 = 0
-        qi2 = 0
-        for i,q in qi:
-            if q <= condicao:
-                qi2 = max(qi2, q)
-            if qi2 == q:
-                i2 = i
-        return i2
-'''  
