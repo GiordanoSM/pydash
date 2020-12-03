@@ -35,7 +35,6 @@ class r2aPandas(IR2A):
         self.send_up(msg)
 
     def handle_segment_size_request(self, msg):
-        print(self.whiteboard.get_playback_buffer_size())
 
         if self.pandas.n == 0: 
             buffer_size = 0
@@ -92,7 +91,7 @@ class Pandas:
         #throughput do xml, primeiro throughput do algoritmo
         self.tresponse = actual_tresponse
         self.td[0] = actual_tresponse - self.trequest
-        self.z.append(bit_length/self.td[0]) ####
+        self.z.append(bit_length/self.td[0])
 
         idx_x0 = int(self.qi.size/2)   # escolher inicialização
         x0 = self.qi[idx_x0]  
@@ -116,20 +115,15 @@ class Pandas:
     
     def get_quality(self):
         self.estimate_xn()
-        #self.S()
-        self.y.append(self.x[-1])
-        #self.Q()
-        #Sugestao: 
+        self.S()
+        #self.y.append(self.x[-1])
+        self.Q()
 
-        qi2 = 0
-
-        qi2 = self.qi[self.qi <= self.y[-1]]
-        
-        if(qi2.size == 0): self.r.append(self.qi[0])
-        else: self.r.append(qi2[-1])
 
         self.tTarget_inter_request()
+        
         return self.r[-1]
+        
 
     def S(self): #EWMA smoother
         self.y.append(self.y[-1] - self.tr[-1] * self.alfa * (self.y[-1] - self.x[-1]))
