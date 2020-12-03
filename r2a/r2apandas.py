@@ -47,11 +47,9 @@ class r2aPandas(IR2A):
         pass
 
     def finalization(self):
-        '''print("**************** x:")
+        print("**************** x:")
         print("x:", self.pandas.x)
-        print("**************** tr:")
-        print("tr:", self.pandas.tr)'''
-        pass
+        #pass
         
 
 
@@ -85,8 +83,8 @@ class Pandas:
         #throughput do xml, primeiro throughput do algoritmo
         self.td[0] = actual_trequest - self.trequest
         self.z.append(bit_length/self.td[0])
-        idx_x0 = self.qi.size/2
-        x0 = self.qi[0]  # lembrar de mudar ****
+        idx_x0 = int(self.qi.size/2)   # escolher inicialização
+        x0 = self.qi[idx_x0]  
         self.x.append(x0)
         self.y.append(x0)
         self.r.append(x0)
@@ -97,6 +95,8 @@ class Pandas:
     
     def estimate_xn(self):
         self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez tr[0] = td[0]
+        self.b.append(max(0, self.b[-1] + self.t - self.tr[-1]))
+
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
         self.x.append(xn)
@@ -106,7 +106,7 @@ class Pandas:
         self.S()
         self.Q()
         self.tTarget_inter_request()
-        return self.r[0]
+        return self.r[-1]
 
     def S(self): #EWMA smoother
         self.y.append(self.y[-1] - self.tr[-1] * self.alfa * (self.y[-1] - self.x[-1]))
@@ -129,9 +129,6 @@ class Pandas:
 
     def get_rdown(self):
         y2 = self.y[-1] - self.deltadown 
-        '''print("y2: ", y2)
-        for q in self.qi:
-            print(q)'''
         qi2 = self.qi[self.qi <= y2] 
         if(qi2.size): return qi2[-1]
         else:         return self.qi[0]
@@ -149,7 +146,6 @@ class Pandas:
     def update_request(self, actual_trequest, buffer_size):
         self.n += 1
         self.trequest = actual_trequest
-        self.b.append(buffer_size )
 
 
 '''
