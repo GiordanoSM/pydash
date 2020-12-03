@@ -20,11 +20,10 @@ class r2aPandas(IR2A):
     def __init__(self, id):
         IR2A.__init__(self, id)
         self.parsed_mpd = ''
-        self.initialize()
         self.pandas = Pandas()
 
     def handle_xml_request(self, msg):
-        self.pandas.update_request(time.perf_counter(), self.whiteboard.get_playback_buffer_size())
+        self.pandas.update_request(time.perf_counter(), 0)
         self.send_down(msg)
 
     def handle_xml_response(self, msg):
@@ -36,6 +35,14 @@ class r2aPandas(IR2A):
         self.send_up(msg)
 
     def handle_segment_size_request(self, msg):
+        print(self.whiteboard.get_playback_buffer_size())
+
+        if self.pandas.n == 0: 
+            buffer_size = 0
+        else:
+            buffer_size = self.whiteboard.get_playback_buffer_size()[-1][1]
+
+        self.pandas.update_request(time.perf_counter(), buffer_size)
         msg.add_quality_id(self.pandas.get_quality())
         self.send_down(msg)
 
@@ -49,6 +56,7 @@ class r2aPandas(IR2A):
     def finalization(self):
         print("**************** x:")
         print("x:", self.pandas.x)
+        print('z:', self.pandas.z)
         #pass
         
 
@@ -68,7 +76,7 @@ class Pandas:
         self.t     = t     # duração do segmento de vídeo
         self.b     = b     # duração do buffer do cliente
         self.bmin  = bmin  # duração mínima do buffer do cliente
-        self.r     = r     # taxa de bits de vídeo disponível em qi [1] e índice na lista de qualidades[0]
+        self.r     = r     # taxa de bits de vídeo disponível em qi
         self.tnd   = tnd   # tempo alvo entre as solicitações
         self.tr    = tr    # tempo real entre as solicitações
         self.td    = td    # duração do download
@@ -88,14 +96,13 @@ class Pandas:
         self.x.append(x0)
         self.y.append(x0)
         self.r.append(x0)
-        self.b.append((1-self.r[-1]/self.y[-1])*self.t/self.beta + self.bmin)
         self.tTarget_inter_request()
 
     # Estimativa da porção da largura de banda
     
     def estimate_xn(self):
-        self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez tr[0] = td[0]
-        self.b.append(max(0, self.b[-1] + self.t - self.tr[-1]))
+        self.tr.append(max(self.t, self.td[-1])) #na primeira vez tr[0] = td[0]
+        #self.b.append(max(0, self.b[-1] + self.t - self.tr[-1]))
 
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
@@ -103,8 +110,20 @@ class Pandas:
     
     def get_quality(self):
         self.estimate_xn()
-        self.S()
-        self.Q()
+        #self.S()
+        self.y.append(self.x[-1])
+        #self.Q()
+        #Sugestao: 
+
+        qi2 = 0
+        for q in self.qi:
+            if q <= self.x[-1]:
+                qi2 = max(qi2, q)
+        
+        if(qi2 == 0): qi2 = self.qi[0]
+
+        self.r.append(qi2)
+
         self.tTarget_inter_request()
         return self.r[-1]
 
@@ -119,7 +138,7 @@ class Pandas:
         if(self.r[-1] < rup): rn = rup 
         elif(rup <= self.r[-1] and self.r[-1] <= rdown): rn = self.r[-1] 
         else: rn = rdown 
-        self.r.append(rn) 
+        self.r.append(rn)
    
     def get_rup(self):
         y2 = self.y[-1] - self.deltaup
@@ -146,6 +165,7 @@ class Pandas:
     def update_request(self, actual_trequest, buffer_size):
         self.n += 1
         self.trequest = actual_trequest
+        self.b.append(buffer_size)
 
 
 '''
