@@ -53,9 +53,10 @@ class r2aPandas(IR2A):
         pass
 
     def finalization(self):
-        print("**************** x:")
-        print("x:", self.pandas.x)
-        print("z:", self.pandas.z)
+        with open('../data.txt', 'wb')as f:
+            f.write(("x:" + str(self.pandas.x)).encode())
+            f.write(("\nz:" + str(self.pandas.z)).encode())
+        
         print("qi:", self.pandas.qi)
         #pass
         
@@ -111,19 +112,17 @@ class Pandas:
 
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
-        self.x.append(xn)
+        self.x.append(max(xn, self.qi[0])) #Valor mínimo para x
     
     def get_quality(self):
         self.estimate_xn()
         self.S()
-        #self.y.append(self.x[-1])
         self.Q()
 
 
         self.tTarget_inter_request()
         
         return self.r[-1]
-        
 
     def S(self): #EWMA smoother
         self.y.append(self.y[-1] - self.tr[-1] * self.alfa * (self.y[-1] - self.x[-1]))
