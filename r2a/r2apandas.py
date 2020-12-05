@@ -55,8 +55,9 @@ class r2aPandas(IR2A):
     def finalization(self):
         print("**************** x:")
         print("x:", self.pandas.x)
-        print("z:", self.pandas.z)
-        print("qi:", self.pandas.qi)
+        print()
+        s = [x-z for (x,z) in zip(self.pandas.x, self.pandas.z)]
+        print("td:", list(enumerate(s)))
         #pass
         
 
@@ -116,12 +117,8 @@ class Pandas:
     def get_quality(self):
         self.estimate_xn()
         self.S()
-        #self.y.append(self.x[-1])
         self.Q()
-
-
         self.tTarget_inter_request()
-        
         return self.r[-1]
         
 
