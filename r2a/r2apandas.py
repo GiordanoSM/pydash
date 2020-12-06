@@ -92,9 +92,6 @@ class Pandas:
         self.deltaup   = deltaup     # margem de segurança para cima 
         self.deltadown = deltadown   # margem de segurança para baixo
 
-        self.avg_z = 0
-        self.list_avg_z = []
-        self.dev_z = 0
         self.estimated_z = []
 
     def initpandas(self, actual_tresponse, bit_length):
@@ -108,26 +105,20 @@ class Pandas:
         
         idx = np.where(self.qi == q)[0][0]
         x0 = self.qi[idx+1]
-        #idx_x0 = int(self.qi.size/2)   # escolher inicialização
-        #x0 = self.qi[idx_x0]  
+
         self.x.append(x0)
         self.y.append(x0)
         self.r.append(x0)
         self.tTarget_inter_request()
 
         
-        #self.w = self.qi[0]
         self.w = self.qi[int(idx/2+1)]
-        
-        self.e = 0.1
-        self.alfa = 0.5
         
 
     # Estimativa da porção da largura de banda
     
     def estimate_xn(self):
         self.tr.append(max(self.tnd[-1], self.td[-1])) #na primeira vez tr[0] = td[0]
-        #self.b.append(max(0, self.b[-1] + self.t - self.tr[-1]))
 
         if (self.tnd[-1] > self.td[-1]):
             time.sleep(self.tnd[-1] - self.td[-1])
@@ -185,17 +176,37 @@ class Pandas:
         self.td.append(self.tresponse - self.trequest) # tempo do download do segmento
         self.z.append((self.r[-1]*self.t)/self.td[-1]) # valor do throughput TCP real
     
-        self.avg_z = self.avg_z*0.8 + self.z[-1]*0.2 #novo (0.125), alfa = 0.2
-        self.list_avg_z.append(self.avg_z)
-        dev = self.z[-1] - self.avg_z
-        if dev < 0: dev = dev * -1
-        #self.dev_z = (0.75) * self.dev_z + 0.15 * dev #beta=0.15
-        self.estimated_z.append(self.avg_z) #+ 4*self.dev_z
+        next_est = 0
+
+        if len(self.z) < 2: # espera ter algo além do inicial
+            next_est = self.z[-1]
+
+        elif len(self.z) < 5: # espera ter pelo menos 3 z após o inicial
+            for zn in self.z[1:]:
+                next_est += zn/len(self.z[1:])
+
+        elif len(self.z) < 11: # quer considerar o últimos 10 z, sem contar o inicial
+            total_weight = len(self.z[1:]) + 4
+            for zn in self.z[1:len(self.z) - 3]: # nao considera os ultimos 3 por enquanto
+                next_est += zn/total_weight
+
+            next_est += self.z[len(self.z)-1]*3/total_weight
+            next_est += self.z[len(self.z)-2]*2/total_weight
+
+        else:
+            total_weight = 10 + 4
+            for zn in self.z[-10:]:
+                next_est += zn/total_weight
+            
+            next_est += self.z[len(self.z)-1]*3/total_weight
+            next_est += self.z[len(self.z)-2]*2/total_weight
+
+        self.estimated_z.append(next_est) 
 
     def update_request(self, actual_trequest, buffer_size):
         self.n += 1
         self.trequest = actual_trequest
-        self.b.append(buffer_size)
+        self.b.append(buffer_size) 
 
     def get_max_q(self, limit):
         qi2 = self.qi[self.qi <= limit] 
