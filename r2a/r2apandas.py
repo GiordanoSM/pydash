@@ -14,6 +14,7 @@ from player.parser import *
 from r2a.ir2a import IR2A
 import numpy as np
 import time
+import statistics
 
 class r2aPandas(IR2A):
 
@@ -23,6 +24,7 @@ class r2aPandas(IR2A):
         self.pandas = Pandas()
 
     def handle_xml_request(self, msg):
+        self.trequest = time.perf_counter()
         self.pandas.update_request(time.perf_counter(), 0)
         self.send_down(msg)
 
@@ -53,17 +55,19 @@ class r2aPandas(IR2A):
         pass
 
     def finalization(self):
-        print("**************** x:")
-        print("x:", self.pandas.x)
-        print()
-        s = [x-z for (x,z) in zip(self.pandas.x, self.pandas.z)]
-        print("td:", list(enumerate(s)))
+        with open('../data.txt', 'wb')as f:
+            f.write(("x:" + str(self.pandas.x)).encode())
+            f.write(("\n\ny:" + str(self.pandas.y)).encode())
+            f.write(("\n\nz:" + str(self.pandas.z)).encode())
+            f.write(("\n\nz_estimado:" + str(self.pandas.estimated_z)).encode())
+        
+        print("qi:", self.pandas.qi)
         #pass
         
 
 
 class Pandas:
-    def __init__(self, w=0.3, k=0.14, beta=0.2, alfa=0.2, e=0.15, t=1, b=[], 
+    def __init__(self, w=0.3, k=0.14, beta=0.2, alfa=0.5, e=0.1, t=1, b=[], 
                  bmin=26, r = [], deltaup=0, deltadown=0, trequest=0, tresponse=0, 
                  n=-1, tnd=[], tr=[], td=[0], x=[], y=[], z=[], qi=np.array([])):
         self.trequest = trequest # momento em que foi realizado o request
@@ -88,18 +92,31 @@ class Pandas:
         self.deltaup   = deltaup     # margem de segurança para cima 
         self.deltadown = deltadown   # margem de segurança para baixo
 
+        self.avg_z = 0
+        self.list_avg_z = []
+        self.dev_z = 0
+        self.estimated_z = []
+
     def initpandas(self, actual_tresponse, bit_length):
         #throughput do xml, primeiro throughput do algoritmo
         self.tresponse = actual_tresponse
         self.td[0] = actual_tresponse - self.trequest
         self.z.append(bit_length/self.td[0])
-
+        self.list_avg_z.append(self.avg_z)
         idx_x0 = int(self.qi.size/2)   # escolher inicialização
         x0 = self.qi[idx_x0]  
         self.x.append(x0)
         self.y.append(x0)
         self.r.append(x0)
         self.tTarget_inter_request()
+
+        
+        #self.w = self.qi[0]
+        self.w = self.qi[int(idx_x0/2)]
+        #self.k = 0.7
+        self.e = 0.1
+        self.alfa = 0.5
+        
 
     # Estimativa da porção da largura de banda
     
@@ -112,18 +129,28 @@ class Pandas:
 
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
-        self.x.append(xn)
+        self.x.append(max(xn, self.qi[0])) #Valor mínimo para x
     
     def get_quality(self):
         self.estimate_xn()
         self.S()
         self.Q()
+
+        #Tratamento de variação para a pior qualidade, pois não fica pior que a pior qualidade
+        if (self.r[-2] != self.qi[0] and self.r[-1] == self.qi[0] and self.b[-1] > 0):
+            qi2 = self.qi[self.qi <= self.b[-1] * self.estimated_z[-1]]
+            qi2 = qi2[qi2 <= self.r[-2]]
+            if(qi2.size): 
+                self.r[-1] = qi2[-1]
+                self.x[-1] = qi2[-1]
+                self.y[-1] = qi2[-1]
+
         self.tTarget_inter_request()
         return self.r[-1]
-        
 
     def S(self): #EWMA smoother
-        self.y.append(self.y[-1] - self.tr[-1] * self.alfa * (self.y[-1] - self.x[-1]))
+        yn = self.y[-1] - self.tr[-1] * self.alfa * (self.y[-1] - self.x[-1])
+        self.y.append(max(yn, self.qi[0]))
     
     def Q(self): #dead-zone quantizer
         self.deltaup = self.e * self.y[-1]
@@ -157,6 +184,14 @@ class Pandas:
         self.td.append(self.tresponse - self.trequest) # tempo do download do segmento
         self.z.append((self.r[-1]*self.t)/self.td[-1]) # valor do throughput TCP real
     
+        self.avg_z = self.avg_z*0.8 + self.z[-1]*0.2 #novo (0.125), alfa = 0.2
+        #self.avg_z = 0.8*statistics.harmonic_mean([self.avg_z, self.z[1]])
+        self.list_avg_z.append(self.avg_z)
+        dev = self.z[-1] - self.avg_z
+        if dev < 0: dev = dev * -1
+        #self.dev_z = (0.75) * self.dev_z + 0.15 * dev #beta=0.15
+        self.estimated_z.append(self.avg_z) #+ 4*self.dev_z
+
     def update_request(self, actual_trequest, buffer_size):
         self.n += 1
         self.trequest = actual_trequest
