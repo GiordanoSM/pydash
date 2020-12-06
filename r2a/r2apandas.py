@@ -102,9 +102,14 @@ class Pandas:
         self.tresponse = actual_tresponse
         self.td[0] = actual_tresponse - self.trequest
         self.z.append(bit_length/self.td[0])
-        self.list_avg_z.append(self.avg_z)
-        idx_x0 = int(self.qi.size/2)   # escolher inicialização
-        x0 = self.qi[idx_x0]  
+        
+        z2 = self.z[-1]
+        q = self.get_max_q(z2)
+        
+        idx = np.where(self.qi == q)[0][0]
+        x0 = self.qi[idx+1]
+        #idx_x0 = int(self.qi.size/2)   # escolher inicialização
+        #x0 = self.qi[idx_x0]  
         self.x.append(x0)
         self.y.append(x0)
         self.r.append(x0)
@@ -112,8 +117,8 @@ class Pandas:
 
         
         #self.w = self.qi[0]
-        self.w = self.qi[int(idx_x0/2)]
-        #self.k = 0.7
+        self.w = self.qi[int(idx/2+1)]
+        
         self.e = 0.1
         self.alfa = 0.5
         
@@ -164,15 +169,11 @@ class Pandas:
    
     def get_rup(self):
         y2 = self.y[-1] - self.deltaup
-        qi2 = self.qi[self.qi <= y2] 
-        if(qi2.size): return qi2[-1]
-        else:         return self.qi[0]
+        return self.get_max_q(y2)
 
     def get_rdown(self):
         y2 = self.y[-1] - self.deltadown 
-        qi2 = self.qi[self.qi <= y2] 
-        if(qi2.size): return qi2[-1]
-        else:         return self.qi[0]
+        return self.get_max_q(y2)
 
 
     def tTarget_inter_request(self):
@@ -185,7 +186,6 @@ class Pandas:
         self.z.append((self.r[-1]*self.t)/self.td[-1]) # valor do throughput TCP real
     
         self.avg_z = self.avg_z*0.8 + self.z[-1]*0.2 #novo (0.125), alfa = 0.2
-        #self.avg_z = 0.8*statistics.harmonic_mean([self.avg_z, self.z[1]])
         self.list_avg_z.append(self.avg_z)
         dev = self.z[-1] - self.avg_z
         if dev < 0: dev = dev * -1
@@ -196,3 +196,8 @@ class Pandas:
         self.n += 1
         self.trequest = actual_trequest
         self.b.append(buffer_size)
+
+    def get_max_q(self, limit):
+        qi2 = self.qi[self.qi <= limit] 
+        if(qi2.size): return qi2[-1]
+        else:         return self.qi[0]
