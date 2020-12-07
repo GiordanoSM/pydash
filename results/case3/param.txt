@@ -1,8 +1,0 @@
-self.w = self.qi[0]
-        self.k = 0.14
-        self.e = 0.1
-        self.alfa = 0.5
-
-x e y min = qi[0]
-
-Esquema de esvaziar o buffer antes de ir para a pior qualidade.
