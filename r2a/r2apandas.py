@@ -134,7 +134,7 @@ class Pandas:
 
         #Tratamento de variação para a pior qualidade, pois não fica pior que a pior qualidade
         if (self.r[-2] != self.qi[0] and self.r[-1] == self.qi[0] and self.b[-1] > 0):
-            qi2 = self.qi[self.qi <= self.b[-1] * self.estimated_z[-1]]
+            qi2 = self.qi[self.qi <= self.b[-1] * self.estimated_z[-1] * 2/3]
             qi2 = qi2[qi2 <= self.r[-2]]
             if(qi2.size): 
                 self.r[-1] = qi2[-1]
@@ -175,38 +175,13 @@ class Pandas:
         self.tresponse = actual_tresponse
         self.td.append(self.tresponse - self.trequest) # tempo do download do segmento
         self.z.append((self.r[-1]*self.t)/self.td[-1]) # valor do throughput TCP real
-    
-        next_est = 0
 
-        if len(self.z) < 2: # espera ter algo além do inicial
-            next_est = self.z[-1]
-
-        elif len(self.z) < 5: # espera ter pelo menos 3 z após o inicial
-            for zn in self.z[1:]:
-                next_est += zn/len(self.z[1:])
-
-        elif len(self.z) < 11: # quer considerar o últimos 10 z, sem contar o inicial
-            total_weight = len(self.z[1:]) + 4
-            for zn in self.z[1:len(self.z) - 3]: # nao considera os ultimos 3 por enquanto
-                next_est += zn/total_weight
-
-            next_est += self.z[len(self.z)-1]*3/total_weight
-            next_est += self.z[len(self.z)-2]*2/total_weight
-
-        else:
-            total_weight = 10 + 4
-            for zn in self.z[-10:]:
-                next_est += zn/total_weight
-            
-            next_est += self.z[len(self.z)-1]*3/total_weight
-            next_est += self.z[len(self.z)-2]*2/total_weight
-
-        self.estimated_z.append(next_est) 
+        self.estimated_z.append(self.z[-1])
 
     def update_request(self, actual_trequest, buffer_size):
         self.n += 1
         self.trequest = actual_trequest
-        self.b.append(buffer_size) 
+        self.b.append(buffer_size)
 
     def get_max_q(self, limit):
         qi2 = self.qi[self.qi <= limit] 

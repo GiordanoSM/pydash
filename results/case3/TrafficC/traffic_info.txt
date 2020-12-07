@@ -1,3 +1,0 @@
-    traffic_shaping_profile_interval 5,
-    traffic_shaping_profile_sequence LMHHHHHHHHHH,
-    traffic_shaping_seed 2,
