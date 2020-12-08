@@ -2,7 +2,6 @@
 """
 @author: Hevelyn Sthefany L. Carvalho 
 @author: Giordano Suffert Monteiro 
-@author: Abel Augustu Alves Moreira
 @date: 30/11/2020
 @description: PyDash Project
 
@@ -54,14 +53,7 @@ class r2aPandas(IR2A):
         pass
 
     def finalization(self):
-        with open('../data.txt', 'wb')as f:
-            f.write(("x:" + str(self.pandas.x)).encode())
-            f.write(("\n\ny:" + str(self.pandas.y)).encode())
-            f.write(("\n\nz:" + str(self.pandas.z)).encode())
-            f.write(("\n\nz_estimado:" + str(self.pandas.estimated_z)).encode())
-        
-        print("qi:", self.pandas.qi)
-        #pass
+        pass
         
 
 
