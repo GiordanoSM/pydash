@@ -24,7 +24,6 @@ class r2aPandas(IR2A):
         self.pandas = Pandas()
 
     def handle_xml_request(self, msg):
-        self.trequest = time.perf_counter()
         self.pandas.update_request(time.perf_counter(), 0)
         self.send_down(msg)
 
@@ -122,6 +121,8 @@ class Pandas:
 
         if (self.tnd[-1] > self.td[-1]):
             time.sleep(self.tnd[-1] - self.td[-1])
+            self.trequest = time.perf_counter()
+            
 
         m = max(0, self.x[-1]-self.z[-1]+self.w) 
         xn = self.x[-1] + self.k*self.tr[-1]*(self.w - m) 
